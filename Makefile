@@ -18,23 +18,18 @@ AR_OLD := tools/gcc/ar
 
 # export COMPILER_PATH := $(WORKING_DIR)/tools/gcc
 
-ifeq ($(USE_MODERN_GCC),1)
-AR_OLD := ar
-AS := mips-linux-gnu-as
-CC := mips-linux-gnu-gcc
-endif
-
 ifeq ($(ABI),eabi)
-IFLAGS := -I $(WORKING_DIR)/include -I $(WORKING_DIR)/include/gcc -I $(WORKING_DIR)/include/PR -I.
 ABIFLAGS := -mabi=eabi -mgp32 -mfp32
-AR_OLD := ar
-AS := mips-linux-gnu-as
-CC := mips-linux-gnu-gcc
+USE_MODERN_GCC := 1
 endif
 
 ifeq ($(ABI),n32)
-IFLAGS := -I $(WORKING_DIR)/include -I $(WORKING_DIR)/include/gcc -I $(WORKING_DIR)/include/PR -I.
 ABIFLAGS := -mabi=n32
+USE_MODERN_GCC := 1
+endif
+
+ifeq ($(USE_MODERN_GCC),1)
+IFLAGS := -I $(WORKING_DIR)/include -I /usr/mips-linux-gnu/include/ -I $(WORKING_DIR)/include/PR -I.
 AR_OLD := ar
 AS := mips-linux-gnu-as
 CC := mips-linux-gnu-gcc
