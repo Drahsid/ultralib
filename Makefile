@@ -1,12 +1,13 @@
 NON_MATCHING ?= 1
 
-ABI ?= o32
+ABI ?= eabi
+USE_MODERN_GCC ?= 0
 
-TARGET := libgultra_rom
-BASE_DIR := base_$(TARGET)
-BASE_AR := $(TARGET).a
+TARGET := libgultra_
+BASE_DIR := base_$(TARGET)rom
+BASE_AR := $(TARGET)rom.a
 BUILD_DIR := build
-BUILD_AR := $(BUILD_DIR)/$(TARGET)_$(ABI).a
+BUILD_AR = $(BUILD_DIR)/$(TARGET)
 
 WORKING_DIR := $(shell pwd)
 
@@ -19,33 +20,41 @@ AR_OLD := tools/gcc/ar
 # export COMPILER_PATH := $(WORKING_DIR)/tools/gcc
 
 ifeq ($(ABI),eabi)
-ABIFLAGS := -mabi=eabi -mgp32 -mfp32
+REG_FLAGS := -mgp32 -mfp32
 USE_MODERN_GCC := 1
 endif
 
 ifeq ($(ABI),n32)
-ABIFLAGS := -mabi=n32
 USE_MODERN_GCC := 1
 endif
 
-ifeq ($(USE_MODERN_GCC),1)
-IFLAGS := -I $(WORKING_DIR)/include -I /usr/mips-linux-gnu/include/ -I $(WORKING_DIR)/include/PR -I.
-AR_OLD := ar
-AS := mips-linux-gnu-as
-CC := mips-linux-gnu-gcc
+ifeq ($(ABI),32)
+TARGET_PRE:=o
 endif
+
+IFLAGS := -I $(WORKING_DIR)/include -I $(WORKING_DIR)/include/PR -I. -I$(MIPS64_LIBGCCDIR)/include -I$(MIPS64_LIBCDIR)/include
+GBI_DEFINE ?= -DF3DEX_GBI_2
+DEF_FLAGS := -DMIPSEB -D_MIPS_SZLONG=32 $(GBI_DEFINE)
+CDEF_FLAGS := -D_LANGUAGE_C -D__USE_ISOC99 
+ADEF_FLAGS := -D_LANGUAGE_ASSEMBLY -D_ULTRA64
+ABI_FLAG := -mabi=$(ABI)
+ARCH_FLAGS := -mips3 -mtune=vr4300 -march=vr4300 -mhard-float
 
 ifeq ($(DEBUG_BUILD),1)
-OPTFLAGS := -Og -g
+OPT_FLAGS := -g3
+OPT_FLAGS2 := -mfix4300 -mno-check-zero-division -mframe-header-opt -fno-inline-functions -falign-functions=32 -fwrapv -fmerge-all-constants -ffast-math
+DEF_FLAGS += -DDEBUG
+BUILD_AR := $(BUILD_AR)d_$(TARGET_PRE)$(ABI).a
 else
-OPTFLAGS := -Os
-DFLAGS := -DNDEBUG -D_FINALROM
+OPT_FLAGS := -Os
+OPT_FLAGS2 := -mfix4300 -mno-check-zero-division -mframe-header-opt -fno-inline-functions -falign-functions=64 -fwrapv -fmerge-all-constants -fno-stack-protector -fmodulo-sched -fmodulo-sched-allow-regmoves -fira-hoist-pressure -fweb -floop-interchange -fsplit-paths -fallow-store-data-races
+DEF_FLAGS += -DNDEBUG -D_FINALROM
+BUILD_AR := $(BUILD_AR)rom_$(TARGET_PRE)$(ABI).a
 endif
 
-CFLAGS  :=           -c -G 0 -mips3 -march=vr4300 $(ABIFLAGS) -mfix4300 -mno-abicalls -fno-PIC -ffreestanding -fwrapv -fno-stack-protector -mno-check-zero-division -D_LANGUAGE_C -Wall -Wno-missing-braces
-ASFLAGS := -nostdinc -c -G 0 -mips3 -march=vr4300 $(ABIFLAGS) -mfix4300 -mno-abicalls -fno-PIC -ffreestanding -DMIPSEB -D_LANGUAGE_ASSEMBLY -D_ULTRA64 -x assembler-with-cpp
-GBIDEFINE := -DF3DEX_GBI_2
-CPPFLAGS = -D_MIPS_SZLONG=32 -D__USE_ISOC99 $(DFLAGS) $(IFLAGS) $(GBIDEFINE)
+CC_FLAGS :=           -c -G 0 $(ARCH_FLAGS) $(ABI_FLAG) $(REG_FLAGS) -mno-shared -mno-abicalls -fno-common -fno-PIC -ffreestanding -Wall -Wno-missing-braces $(CDEF_FLAGS)
+AS_FLAGS := -nostdinc -c -G 0 $(ARCH_FLAGS) $(ABI_FLAG) $(REG_FLAGS) -mno-shared -fno-common -fno-PIC -ffreestanding -x assembler-with-cpp $(ADEF_FLAGS)
+CPP_FLAGS := $(DEF_FLAGS) $(IFLAGS)
 
 SRC_DIRS := $(shell find src -type d)
 ASM_DIRS := $(shell find asm -type d -not -path "asm/non_matchings*")
@@ -76,6 +85,13 @@ NUM_OBJS = $(words $(AR_ORDER))
 NUM_OBJS_MATCHED = $(words $(MATCHED_OBJS))
 NUM_OBJS_UNMATCHED = $(words $(UNMATCHED_OBJS))
 
+ifeq ($(USE_MODERN_GCC),1)
+AR_OLD := ar
+AS := mips64-as
+CC := mips64-gcc
+endif
+
+
 $(shell mkdir -p asm $(BASE_DIR) src $(BUILD_DIR)/$(BASE_DIR) $(foreach dir,$(ASM_DIRS) $(SRC_DIRS),$(BUILD_DIR)/$(dir)))
 
 .PHONY: all clean distclean setup
@@ -98,8 +114,7 @@ distclean: clean
 	$(MAKE) -C tools distclean
 	$(RM) -rf $(BASE_DIR)
 
-setup:
-	$(MAKE) -C tools
+setup:#	$(MAKE) -C tools
 	cd $(BASE_DIR) && $(AR) xo ../$(BASE_AR)
 	chmod -R +rw $(BASE_DIR)
 
@@ -134,14 +149,14 @@ $(BUILD_DIR)/src/sp/spriteex2.marker: GBIDEFINE :=
 $(BUILD_DIR)/src/sp/spriteex2.marker: GBIDEFINE := 
 $(BUILD_DIR)/src/mgu/%.marker: export VR4300MUL := OFF
 $(BUILD_DIR)/src/mgu/rotate.marker: export VR4300MUL := ON
-$(BUILD_DIR)/src/os/%.marker: ASFLAGS += -P
-$(BUILD_DIR)/src/gu/%.marker: ASFLAGS += -P
-$(BUILD_DIR)/src/libc/%.marker: ASFLAGS += -P
+$(BUILD_DIR)/src/os/%.marker: AS_FLAGS += -P
+$(BUILD_DIR)/src/gu/%.marker: AS_FLAGS += -P
+$(BUILD_DIR)/src/libc/%.marker: AS_FLAGS += -P
 $(BUILD_DIR)/src/voice/%.marker: CC := tools/compile_sjis.py -D__CC=$(CC) -Isrc/voice/
 
 $(BUILD_DIR)/%.marker: %.c
 ifneq ($(NON_MATCHING),1)
-	cd $(<D) && $(WORKING_DIR)/$(CC) $(CFLAGS) $(CPPFLAGS) $(OPTFLAGS) $(<F) -o $(WORKING_DIR)/$(@:.marker=.o)
+	cd $(<D) && $(WORKING_DIR)/$(CC) $(CC_FLAGS) $(CPP_FLAGS) $(OPT_FLAGS) $(<F) -o $(WORKING_DIR)/$(@:.marker=.o)
 # check if this file is in the archive; patch corrupted bytes and change file timestamps to match original if so
 	@$(if $(findstring $(BASE_DIR)/$(@F:.marker=.o), $(BASE_OBJS)), \
 	 python3 tools/fix_objfile.py $(@:.marker=.o) $(BASE_DIR)/$(@F:.marker=.o) && \
@@ -151,13 +166,13 @@ ifneq ($(NON_MATCHING),1)
 	)
 # create or update the marker file
 else
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(OPTFLAGS) $< -o $(@:.marker=.o)
+	$(CC) $(CC_FLAGS) $(CPP_FLAGS) $(OPT_FLAGS) $(OPT_FLAGS2) $< -o $(@:.marker=.o)
 endif
 	@touch $@
 
 $(BUILD_DIR)/%.marker: %.s
 ifneq ($(NON_MATCHING),1)
-	cd $(<D) && $(WORKING_DIR)/$(CC) $(ASFLAGS) $(CPPFLAGS) -I. $(OPTFLAGS) $(<F) -o $(WORKING_DIR)/$(@:.marker=.o)
+	cd $(<D) && $(WORKING_DIR)/$(CC) $(AS_FLAGS) $(CPP_FLAGS) -I. $(OPT_FLAGS) $(<F) -o $(WORKING_DIR)/$(@:.marker=.o)
 # check if this file is in the archive; patch corrupted bytes and change file timestamps to match original if so
 	@$(if $(findstring $(BASE_DIR)/$(@F:.marker=.o), $(BASE_OBJS)), \
 	 python3 tools/fix_objfile.py $(@:.marker=.o) $(BASE_DIR)/$(@F:.marker=.o) && \
@@ -167,7 +182,7 @@ ifneq ($(NON_MATCHING),1)
 	)
 # create or update the marker file
 else
-	$(CC) $(ASFLAGS) $(CPPFLAGS) $(OPTFLAGS) $< -o $(@:.marker=.o)
+	$(CC) $(AS_FLAGS) $(CPP_FLAGS) $(OPT_FLAGS) $< -o $(@:.marker=.o)
 endif
 	@touch $@
 
