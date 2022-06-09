@@ -69,8 +69,8 @@ void __osContGetInitData(u8* pattern, OSContStatus* data) {
     ptr = (u8*)__osContPifRam.ramarray;
     for (i = 0; i < __osMaxControllers; i++, ptr += sizeof(requestHeader), data++) {
         requestHeader = *(__OSContRequesFormat*)ptr;
-        data->error = CHNL_ERR(requestHeader);
-        if (data->error == 0) {
+        data->errno = CHNL_ERR(requestHeader);
+        if (data->errno == 0) {
             data->type = requestHeader.typel << 8 | requestHeader.typeh;
             
             if (data->type & CONT_GCN) {

@@ -1,4 +1,4 @@
-NON_MATCHING ?= 0
+NON_MATCHING ?= 1
 
 TARGET := libgultra_rom
 BASE_DIR := base_$(TARGET)
