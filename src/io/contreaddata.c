@@ -41,8 +41,8 @@ void osContGetReadData(OSContPad* data) {
             data->c_stick_x = c_stick_x;
             data->c_stick_y = c_stick_y;
             data->button = __osTranslateGCNButtons(readformatgcn.button, c_stick_x, c_stick_y);
-            data->l_trig = readformatgcn.l_trig;
-            data->r_trig = readformatgcn.r_trig;
+            data->lt = readformatgcn.lt;
+            data->rt = readformatgcn.rt;
             ptr += sizeof(__OSContGCNShortPollFormat);
         }
         else {
@@ -58,8 +58,8 @@ void osContGetReadData(OSContPad* data) {
             data->button = readformat.button;
             data->c_stick_x = 0;
             data->c_stick_y = 0;
-            data->l_trig = 0;
-            data->r_trig = 0;
+            data->lt = 0;
+            data->rt = 0;
             ptr += sizeof(__OSContReadFormat);
         }
     }
