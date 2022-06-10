@@ -17,24 +17,33 @@ AR_OLD := tools/gcc/ar
 
 export COMPILER_PATH := $(WORKING_DIR)/tools/gcc
 
-CFLAGS := -w -nostdinc -c -G 0 -mgp32 -mfp32 -mips3 -D_LANGUAGE_C 
-ASFLAGS := -w -nostdinc -c -G 0 -mgp32 -mfp32 -mips3 -DMIPSEB -D_LANGUAGE_ASSEMBLY -D_MIPS_SIM=1 -D_ULTRA64 -x assembler-with-cpp
-GBIDEFINE := -DF3DEX_GBI_2
-CPPFLAGS = -D_MIPS_SZLONG=32 -D__USE_ISOC99 -I $(WORKING_DIR)/include -I $(WORKING_DIR)/include/PR $(GBIDEFINE)
+IFLAGS := -I $(WORKING_DIR)/include -I $(WORKING_DIR)/include/PR -I.
+GBI_DEFINE ?= -DF3DEX_GBI_2
+DEF_FLAGS := -DMIPSEB -D_MIPS_SZLONG=32 $(GBI_DEFINE)
+CDEF_FLAGS := -D_LANGUAGE_C -D__USE_ISOC99 
+ADEF_FLAGS := -D_LANGUAGE_ASSEMBLY -D_ULTRA64
+ABI_FLAG := -mabi=32
+ARCH_FLAGS := -mips3 -mtune=vr4300 -march=vr4300 -mhard-float
 
 ifeq ($(USE_MODERN_GCC),1)
-CPPFLAGS += -I $(N64_LIBGCCDIR)/include
+IFLAGS += -I $(N64_LIBGCCDIR)/include 
 else
-CPPFLAGS += -I $(WORKING_DIR)/include/gcc
+IFLAGS += -I $(WORKING_DIR)/include/gcc 
 endif
 
 ifeq ($(findstring _d,$(TARGET)),_d)
-CPPFLAGS += -D_DEBUG
-OPTFLAGS := -O0
+OPT_FLAGS := -g3
+OPT_FLAGS2 := -mfix4300 -mno-check-zero-division -mframe-header-opt -fno-inline-functions -falign-functions=32 -fwrapv -fmerge-all-constants
+DEF_FLAGS += -DDEBUG
 else
-CPPFLAGS += -DNDEBUG -D_FINALROM
-OPTFLAGS := -O3
+OPT_FLAGS := -Os
+OPT_FLAGS2 := -mfix4300 -mno-check-zero-division -mframe-header-opt -fno-inline-functions -falign-functions=64 -fwrapv -fmerge-all-constants -ffast-math -fno-stack-protector -fmodulo-sched -fmodulo-sched-allow-regmoves -fira-hoist-pressure -fweb -floop-interchange -fsplit-paths -fallow-store-data-races
+DEF_FLAGS += -DNDEBUG -D_FINALROM
 endif
+
+CFLAGS	:= -c -G 0 $(ARCH_FLAGS) $(ABI_FLAG) $(REG_FLAGS) -mno-shared -mno-abicalls -fno-common -fno-PIC -ffreestanding -Wall -Wno-missing-braces $(CDEF_FLAGS)
+ASFLAGS := -nostdinc -c -G 0 $(ARCH_FLAGS) $(ABI_FLAG) $(REG_FLAGS) -mno-shared -fno-common -fno-PIC -ffreestanding -x assembler-with-cpp $(ADEF_FLAGS)
+CPP_FLAGS := $(DEF_FLAGS) $(IFLAGS)
 
 SRC_DIRS := $(shell find src -type d)
 ASM_DIRS := $(shell find asm -type d -not -path "asm/non_matchings*")
