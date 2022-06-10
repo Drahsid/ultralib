@@ -21,28 +21,38 @@ IFLAGS := -I $(WORKING_DIR)/include -I $(WORKING_DIR)/include/PR -I.
 GBI_DEFINE ?= -DF3DEX_GBI_2
 DEF_FLAGS := -DMIPSEB -D_MIPS_SZLONG=32 $(GBI_DEFINE)
 CDEF_FLAGS := -D_LANGUAGE_C -D__USE_ISOC99 
-ADEF_FLAGS := -D_LANGUAGE_ASSEMBLY -D_ULTRA64
-ABI_FLAG := -mabi=32
-ARCH_FLAGS := -mips3 -mtune=vr4300 -march=vr4300 -mhard-float
+ADEF_FLAGS := -DMIPSEB -D_LANGUAGE_ASSEMBLY -D_MIPS_SIM=1 -D_ULTRA64
+ARCH_FLAGS := -mips3
 
 ifeq ($(USE_MODERN_GCC),1)
 IFLAGS += -I $(N64_LIBGCCDIR)/include 
-else
-IFLAGS += -I $(WORKING_DIR)/include/gcc 
-endif
+ARCH_FLAGS += -mtune=vr4300 -march=vr4300 -mhard-float
+ABI_FLAG := -mabi=32
 
 ifeq ($(findstring _d,$(TARGET)),_d)
 OPT_FLAGS := -g3
-OPT_FLAGS2 := -mfix4300 -mno-check-zero-division -mframe-header-opt -fno-inline-functions -falign-functions=32 -fwrapv -fmerge-all-constants
+OPT_FLAGS2 := -mno-shared -mno-abicalls -fno-common -fno-PIC -ffreestanding -Wall -Wno-missing-braces -mfix4300 -mno-check-zero-division -mframe-header-opt -fno-inline-functions -falign-functions=32 -fwrapv -fmerge-all-constants
 DEF_FLAGS += -DDEBUG
 else
 OPT_FLAGS := -Os
-OPT_FLAGS2 := -mfix4300 -mno-check-zero-division -mframe-header-opt -fno-inline-functions -falign-functions=64 -fwrapv -fmerge-all-constants -ffast-math -fno-stack-protector -fmodulo-sched -fmodulo-sched-allow-regmoves -fira-hoist-pressure -fweb -floop-interchange -fsplit-paths -fallow-store-data-races
+OPT_FLAGS2 := -mno-shared -mno-abicalls -fno-common -fno-PIC -ffreestanding -Wall -Wno-missing-braces -mfix4300 -mno-check-zero-division -mframe-header-opt -fno-inline-functions -falign-functions=64 -fwrapv -fmerge-all-constants -ffast-math -fno-stack-protector -fmodulo-sched -fmodulo-sched-allow-regmoves -fira-hoist-pressure -fweb -floop-interchange -fsplit-paths -fallow-store-data-races
 DEF_FLAGS += -DNDEBUG -D_FINALROM
 endif
+else
+IFLAGS += -I $(WORKING_DIR)/include/gcc 
+ifeq ($(findstring _d,$(TARGET)),_d)
+OPT_FLAGS := -O0
+OPT_FLAGS2 := -mgp32 -mfp32
+DEF_FLAGS += -DDEBUG
+else
+OPT_FLAGS := -O3
+OPT_FLAGS2 := -mgp32 -mfp32
+DEF_FLAGS += -DNDEBUG -D_FINALROM
+endif
+endif
 
-CFLAGS	:= -c -G 0 $(ARCH_FLAGS) $(ABI_FLAG) $(REG_FLAGS) -mno-shared -mno-abicalls -fno-common -fno-PIC -ffreestanding -Wall -Wno-missing-braces $(CDEF_FLAGS)
-ASFLAGS := -nostdinc -c -G 0 $(ARCH_FLAGS) $(ABI_FLAG) $(REG_FLAGS) -mno-shared -fno-common -fno-PIC -ffreestanding -x assembler-with-cpp $(ADEF_FLAGS)
+CFLAGS	:= -c -G 0 $(ARCH_FLAGS) $(ABI_FLAG) $(REG_FLAGS)  $(CDEF_FLAGS)
+ASFLAGS := -nostdinc -c -G 0 $(ARCH_FLAGS) $(ABI_FLAG) $(REG_FLAGS) -x assembler-with-cpp $(ADEF_FLAGS)
 CPP_FLAGS := $(DEF_FLAGS) $(IFLAGS)
 
 SRC_DIRS := $(shell find src -type d)
