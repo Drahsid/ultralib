@@ -52,7 +52,7 @@ endif
 endif
 
 CFLAGS	:= -c -G 0 $(ARCH_FLAGS) $(ABI_FLAG) $(REG_FLAGS)  $(CDEF_FLAGS)
-ASFLAGS := -nostdinc -c -G 0 $(ARCH_FLAGS) $(ABI_FLAG) $(REG_FLAGS) -x assembler-with-cpp $(ADEF_FLAGS)
+ASFLAGS := -nostdinc -c -G 0 $(ARCH_FLAGS) $(ABI_FLAG) $(REG_FLAGS) $(IFLAGS) -x assembler-with-cpp $(ADEF_FLAGS)
 CPP_FLAGS := $(DEF_FLAGS) $(IFLAGS)
 
 SRC_DIRS := $(shell find src -type d)
