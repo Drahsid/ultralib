@@ -1,4 +1,5 @@
 NON_MATCHING ?= 1
+USE_MODERN_GCC ?= 0
 
 TARGET := libgultra_rom
 BASE_DIR := base_$(TARGET)
@@ -57,6 +58,12 @@ UNMATCHED_OBJS = $(filter-out $(MATCHED_OBJS),$(AR_ORDER))
 NUM_OBJS = $(words $(AR_ORDER))
 NUM_OBJS_MATCHED = $(words $(MATCHED_OBJS))
 NUM_OBJS_UNMATCHED = $(words $(UNMATCHED_OBJS))
+
+ifeq ($(USE_MODERN_GCC),1)
+AR_OLD := ar
+AS := mips-n64-as
+CC := mips-n64-gcc
+endif
 
 $(shell mkdir -p asm $(BASE_DIR) src $(BUILD_DIR)/$(BASE_DIR) $(foreach dir,$(ASM_DIRS) $(SRC_DIRS),$(BUILD_DIR)/$(dir)))
 
