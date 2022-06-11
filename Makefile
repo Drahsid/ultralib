@@ -42,12 +42,12 @@ ARCH_FLAGS := -mips3 -mtune=vr4300 -march=vr4300 -mhard-float
 
 ifeq ($(DEBUG_BUILD),1)
 OPT_FLAGS := -g3
-OPT_FLAGS2 := -mfix4300 -mno-check-zero-division -mframe-header-opt -fno-inline-functions -falign-functions=32 -fwrapv -fmerge-all-constants -ffast-math
+OPT_FLAGS2 := -mfix4300 -mno-check-zero-division -mframe-header-opt -fno-inline-functions -falign-functions=32 -fwrapv -fmerge-all-constants
 DEF_FLAGS += -DDEBUG
 BUILD_AR := $(BUILD_AR)d_$(TARGET_PRE)$(ABI).a
 else
 OPT_FLAGS := -Os
-OPT_FLAGS2 := -mfix4300 -mno-check-zero-division -mframe-header-opt -fno-inline-functions -falign-functions=64 -fwrapv -fmerge-all-constants -fno-stack-protector -fmodulo-sched -fmodulo-sched-allow-regmoves -fira-hoist-pressure -fweb -floop-interchange -fsplit-paths -fallow-store-data-races
+OPT_FLAGS2 := -mfix4300 -mno-check-zero-division -mframe-header-opt -fno-inline-functions -falign-functions=64 -fwrapv -fmerge-all-constants -ffast-math -fno-stack-protector -fmodulo-sched -fmodulo-sched-allow-regmoves -fira-hoist-pressure -fweb -floop-interchange -fsplit-paths -fallow-store-data-races
 DEF_FLAGS += -DNDEBUG -D_FINALROM
 BUILD_AR := $(BUILD_AR)rom_$(TARGET_PRE)$(ABI).a
 endif
