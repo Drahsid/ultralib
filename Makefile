@@ -32,7 +32,7 @@ ifeq ($(ABI),32)
 TARGET_PRE:=o
 endif
 
-IFLAGS := -I $(WORKING_DIR)/include -I $(WORKING_DIR)/include/PR -I. -I$(MIPS64_LIBGCCDIR)/include -I$(N64_INCDIR)/include
+IFLAGS := -I $(WORKING_DIR)/include -I $(WORKING_DIR)/include/PR -I. -I$(N64_INCDIR)/include
 GBI_DEFINE ?= -DF3DEX_GBI_2
 DEF_FLAGS := -DMIPSEB -D_MIPS_SZLONG=32 $(GBI_DEFINE)
 CDEF_FLAGS := -D_LANGUAGE_C -D__USE_ISOC99 
@@ -85,10 +85,26 @@ NUM_OBJS = $(words $(AR_ORDER))
 NUM_OBJS_MATCHED = $(words $(MATCHED_OBJS))
 NUM_OBJS_UNMATCHED = $(words $(UNMATCHED_OBJS))
 
+ifeq ($(ABI),eabi)
+REG_FLAGS = -mgp32 -mfp32
+MIPS64_LIBGCCDIR = $(MIPS64_EABI_LIBGCCDIR)
+endif
+
+ifeq ($(ABI),n32)
+MIPS64_LIBGCCDIR = $(MIPS64_N32_LIBGCCDIR)
+endif
+
+ifeq ($(ABI),32)
+MIPS64_LIBGCCDIR = $(MIPS64_O32_LIBGCCDIR)
+ULTRA_PRE:=o
+endif
+
+IFLAGS += -I$(MIPS64_LIBGCCDIR)/include
+
 ifeq ($(USE_MODERN_GCC),1)
 AR_OLD := ar
-AS := mips64-as
-CC := mips64-gcc
+AS = $(CROSS)$(ULTRA_PRE)$(ABI)-as
+CC = $(CROSS)$(ULTRA_PRE)$(ABI)-gcc
 endif
 
 
