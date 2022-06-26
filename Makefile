@@ -103,6 +103,7 @@ IFLAGS += -I$(MIPS64_LIBGCCDIR)/include
 
 ifeq ($(USE_MODERN_GCC),1)
 AR_OLD := ar
+CROSS = mips64-
 AS = $(CROSS)$(ULTRA_PRE)$(ABI)-as
 CC = $(CROSS)$(ULTRA_PRE)$(ABI)-gcc
 endif
