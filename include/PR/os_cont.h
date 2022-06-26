@@ -62,8 +62,8 @@ typedef struct {
 	s8      stick_y;		/* -80 <= stick_y <= 80 */
 	s8		c_stick_x;
 	s8		c_stick_y;
-	u8		lt;
-	u8		rt;
+	u8		l_trig;
+	u8		r_trig;
 	u8	errno;
 } OSContPad;
 

@@ -124,6 +124,27 @@ typedef struct
     /* 0xD */ u8 r_trig;
 } __OSContGCNShortPollFormat;
 
+typedef struct {
+    u8 stick_x;
+    u8 stick_y;
+    u8 c_stick_x;
+    u8 c_stick_y;
+    u8 l_trig;
+    u8 r_trig;
+    u8 a;
+    u8 b;
+} __OSContGCNOrigin;
+
+typedef struct {
+    u8 txsize;
+    u8 rxsize;
+    u8 cmd;
+    u16 button;
+    __OSContGCNOrigin origin;
+} __OSContGCNOriginFormat;
+
+extern __OSContGCNOrigin __osGCNOrigins[MAXCONTROLLERS];
+
 // Joybus commands
 //from: http://en64.shoutwiki.com/wiki/SI_Registers_Detailed#CONT_CMD_Usage
 #define CONT_CMD_REQUEST_STATUS 0
@@ -164,6 +185,7 @@ typedef struct
 #define CONT_CMD_GCN_READ_GBA_TX   3
 #define CONT_CMD_GCN_WRITE_GBA_TX  35
 #define CONT_CMD_GCN_SHORTPOLL_TX  3
+#define CONT_CMD_GCN_READORIGIN_TX 1
 #define CONT_CMD_GCN_LONGPOLL_TX   3
 
 // Bytes received for each joybus command
@@ -182,6 +204,7 @@ typedef struct
 #define CONT_CMD_GCN_READ_GBA_RX   35
 #define CONT_CMD_GCN_WRITE_GBA_RX  1
 #define CONT_CMD_GCN_SHORTPOLL_RX  8
+#define CONT_CMD_GCN_READORIGIN_RX 10
 #define CONT_CMD_GCN_LONGPOLL_RX   10
 
 #define CONT_CMD_NOP 0xff
@@ -251,7 +274,7 @@ u8 __osContAddressCrc(u16 addr);
 u8 __osContDataCrc(u8 *data);
 s32 __osPfsGetStatus(OSMesgQueue *queue, int channel);
 
-extern u16 __osTranslateGCNButtons(u16 input, s32 c_stick_x, s32 c_stick_y);
+extern u16 __osTranslateGCNButtons(u16 input, s8 c_stick_x, s8 c_stick_y);
 
 extern u8 __osContLastCmd;
 extern OSTimer __osEepromTimer;

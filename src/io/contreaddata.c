@@ -2,6 +2,12 @@
 #include "controller.h"
 #include "siint.h"
 
+#ifdef FAILED_ATTEMPT
+// HACK
+static s32 __osGotGCNOrigins = 0;
+// HACK
+#endif
+
 static void __osPackReadData(void);
 
 s32 osContStartReadData(OSMesgQueue* mq) {
@@ -31,9 +37,27 @@ void osContGetReadData(OSContPad* data) {
     for (i = 0; i < __osMaxControllers; i++, data++) {
         if (__osControllerTypes[i] == CONT_TYPE_GCN) {
             readformatgcn = *(__OSContGCNShortPollFormat*)ptr;
-            data->stick_x = ((s32)readformatgcn.stick_x) - 128;
-            data->stick_y = ((s32)readformatgcn.stick_y) - 128;
-            data->button = __osTranslateGCNButtons(readformatgcn.button, readformatgcn.c_stick_x, readformatgcn.c_stick_y);
+
+#ifdef FAILED_ATTEMPT
+            // HACK
+            if (__osGotGCNOrigins == 0) {
+                __osGCNOrigins[i].stick_x = (s16)0xFF - (s16)readformatgcn.stick_x;
+                __osGCNOrigins[i].stick_y = (s16)0xFF - (s16)readformatgcn.stick_y;
+                __osGCNOrigins[i].c_stick_x = (s16)0xFF - (s16)readformatgcn.c_stick_x;
+                __osGCNOrigins[i].c_stick_y = (s16)0xFF - (s16)readformatgcn.c_stick_y;
+                __osGCNOrigins[i].l_trig = (s16)0xFF - (s16)readformatgcn.l_trig;
+                __osGCNOrigins[i].r_trig = (s16)0xFF - (s16)readformatgcn.r_trig;
+            }
+            // HACK
+#endif
+
+            data->stick_x = (s16)readformatgcn.stick_x - __osGCNOrigins[i].stick_x;
+            data->stick_y = (s16)readformatgcn.stick_y - __osGCNOrigins[i].stick_y;
+            data->c_stick_x = (s16)readformatgcn.c_stick_x - __osGCNOrigins[i].c_stick_x;
+            data->c_stick_y = (s16)readformatgcn.c_stick_y - __osGCNOrigins[i].c_stick_y;
+            data->l_trig = readformatgcn.l_trig - __osGCNOrigins[i].l_trig;
+            data->r_trig = readformatgcn.r_trig - __osGCNOrigins[i].r_trig;
+            data->button = __osTranslateGCNButtons(readformatgcn.button, data->c_stick_x, data->c_stick_y);
             ptr += sizeof(__OSContGCNShortPollFormat);
         }
         else if (__osControllerTypes[i] == CONT_TYPE_N64 || __osControllerTypes[i] == CONT_TYPE_MOUSE) {
@@ -49,10 +73,14 @@ void osContGetReadData(OSContPad* data) {
             data->button = readformat.button;
             data->c_stick_x = 0;
             data->c_stick_y = 0;
-            data->lt = 0;
-            data->rt = 0;
+            data->l_trig = 0;
+            data->r_trig = 0;
             ptr += sizeof(__OSContReadFormat);
         }
+    }
+
+    if (__osGotGCNOrigins == 0) {
+        __osGotGCNOrigins = 1;
     }
 }
 

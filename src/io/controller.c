@@ -17,6 +17,13 @@ OSMesg __osEepromTimerMsg;
 u8 __osControllerTypes[MAXCONTROLLERS];
 u8 __osGamecubeRumbleEnabled[MAXCONTROLLERS];
 
+__OSContGCNOrigin __osGCNOrigins[MAXCONTROLLERS] = {
+    (__OSContGCNOrigin){ 128, 128, 128, 128, 0, 0, 0, 0 },
+    (__OSContGCNOrigin){ 128, 128, 128, 128, 0, 0, 0, 0 },
+    (__OSContGCNOrigin){ 128, 128, 128, 128, 0, 0, 0, 0 },
+    (__OSContGCNOrigin){ 128, 128, 128, 128, 0, 0, 0, 0 },
+};
+
 s32 osContInit(OSMesgQueue* mq, u8* bitpattern, OSContStatus* data) {
     OSMesg dummy;
     s32 ret = 0;
@@ -49,6 +56,13 @@ s32 osContInit(OSMesgQueue* mq, u8* bitpattern, OSContStatus* data) {
 
     __osContGetInitData(bitpattern, data);
     __osContLastCmd = CONT_CMD_REQUEST_STATUS;
+
+#ifdef FAILED_ATTEMPT
+    __osContGetGCNOrigins(mq);
+    __osContLastCmd = CONT_CMD_GCN_READORIGIN;
+    __osContReadGCNOrigins();
+#endif
+
     __osSiCreateAccessQueue();
     osCreateMesgQueue(&__osEepromTimerQ, &__osEepromTimerMsg, 1);
 
@@ -59,17 +73,68 @@ u8 osContGetType(u32 index) {
     return __osControllerTypes[index];
 }
 
-typedef struct {
-    /* 0x0 */ u8 dummy;
-    /* 0x1 */ u8 txsize;
-    /* 0x2 */ u8 rxsize;
-    /* 0x3 */ u8 cmd;
-} __NullCommand;
+#ifdef FAILED_ATTEMPT
+void __osContReadGCNOrigins(void) {
+    u8* ptr = (u8*)__osContPifRam.ramarray;
+    __OSContGCNOriginFormat* readformat;
+    int i;
+
+    for (i = 0; i < __osMaxControllers; i++) {
+        readformat = ptr;
+        if (__osControllerTypes[i] == CONT_TYPE_GCN) {
+            __osGCNOrigins[i].stick_x = readformat->origin.stick_x;
+            __osGCNOrigins[i].stick_y = readformat->origin.stick_y;
+            __osGCNOrigins[i].c_stick_x = readformat->origin.c_stick_x;
+            __osGCNOrigins[i].c_stick_y = readformat->origin.c_stick_y;
+            __osGCNOrigins[i].l_trig = readformat->origin.l_trig;
+            __osGCNOrigins[i].r_trig = readformat->origin.r_trig;
+            __osGCNOrigins[i].a = readformat->origin.a;
+            __osGCNOrigins[i].b = readformat->origin.b;
+        }
+        ptr += sizeof(__OSContGCNOriginFormat);
+    }
+}
+
+void __osContGetGCNOrigins(OSMesgQueue* mq) {
+    u8* ptr = (u8*)__osContPifRam.ramarray;
+    __OSContGCNOriginFormat readformat;
+    OSMesg dummy;
+    int i;
+
+    for (i = 0; i < ARRLEN(__osContPifRam.ramarray); i++) {
+        __osContPifRam.ramarray[i] = 0;
+    }
+
+    __osContPifRam.pifstatus = CONT_CMD_EXE;
+    readformat.txsize = CONT_CMD_GCN_READORIGIN_TX;
+    readformat.rxsize = CONT_CMD_GCN_READORIGIN_RX;
+    readformat.cmd = CONT_CMD_GCN_READORIGIN;
+    readformat.button = 0;
+    readformat.origin.stick_x = 128;
+    readformat.origin.stick_y = 128;
+    readformat.origin.c_stick_x = 128;
+    readformat.origin.c_stick_y = 128;
+    readformat.origin.l_trig = 0;
+    readformat.origin.r_trig = 0;
+    readformat.origin.a = 0;
+    readformat.origin.b = 0;
+
+    for (i = 0; i < __osMaxControllers; i++) {
+        *(__OSContGCNOriginFormat*)ptr = readformat;
+        ptr += sizeof(__OSContGCNOriginFormat);
+    }
+
+    __osSiRawStartDma(OS_WRITE, __osContPifRam.ramarray);
+    osRecvMesg(mq, &dummy, OS_MESG_BLOCK);
+
+    __osSiRawStartDma(OS_READ, __osContPifRam.ramarray);
+    osRecvMesg(mq, &dummy, OS_MESG_BLOCK);
+}
+#endif
 
 void __osContGetInitData(u8* pattern, OSContStatus* data) {
     u8* ptr;
     __OSContRequesFormat requestHeader;
-    __NullCommand packet;
     s32 i;
     OSMesgQueue mq;
     OSMesg dummy;
@@ -96,14 +161,6 @@ void __osContGetInitData(u8* pattern, OSContStatus* data) {
             data->status = requestHeader.status;
 
             bits |= 1 << i;
-
-            // send null packet
-            packet.dummy = 0;
-            packet.txsize = CONT_CMD_REQUEST_STATUS_TX;
-            packet.rxsize = CONT_CMD_REQUEST_STATUS_RX;
-            packet.cmd = CONT_CMD_REQUEST_STATUS;
-
-            *(__NullCommand*)ptr = packet;
         }
     }
     *pattern = bits;
@@ -140,7 +197,7 @@ void __osPackRequestData(u8 cmd) {
     *ptr = CONT_CMD_END;
 }
 
-u16 __osTranslateGCNButtons(u16 input, s32 c_stick_x, s32 c_stick_y) {
+u16 __osTranslateGCNButtons(u16 input, s8 c_stick_x, s8 c_stick_y) {
     u16 ret = 0;
 
     // Face buttons
