@@ -79,9 +79,11 @@ void osContGetReadData(OSContPad* data) {
         }
     }
 
+#ifdef FAILED_ATTEMPT
     if (__osGotGCNOrigins == 0) {
         __osGotGCNOrigins = 1;
     }
+#endif
 }
 
 static void __osPackReadData(void) {
